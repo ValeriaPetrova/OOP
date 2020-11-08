@@ -24,28 +24,29 @@ public:
     class reference{
     private:
         size_t num;
-        RNA *rna;
+        RNA &rna;
     public:
-        reference(size_t, RNA*);
+        reference(size_t, RNA&);
+        //: num(idx), rna(rna1){ }
 
-        reference &operator=(Nucl n);
+        reference &operator=(Nucl);
+        reference &operator=(const reference&);
         operator Nucl() const;
         ~reference();
     };
     //______________________
     RNA() : chain_of_nucl(nullptr), numb_of_nucl(0), length_of_chain(0) { };
     RNA(Nucl N, size_t length);
-    explicit RNA(size_t);
     RNA(const RNA&);
 
     virtual ~RNA();// деструктор
 
-    Nucl GetNucl(size_t);
+    Nucl GetNucl(size_t) const;
     void add_elem(Nucl);
-    Nucl complementary(Nucl);
-    bool isComplementary(Nucl, Nucl);
+    Nucl complementary(Nucl) const;
+    bool isComplementary(const RNA&) const;
     void trim(size_t);
-    RNA split(size_t index);
+    RNA split(size_t);
     size_t cardinality(Nucl);
 
     friend RNA operator+ (RNA&, RNA&);
@@ -56,6 +57,8 @@ public:
     reference operator[] (size_t num);
 
     void output() const;
+    size_t length() const;
+    size_t num_of_nucls() const;
 };
 
 #endif
