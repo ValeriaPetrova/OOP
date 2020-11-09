@@ -520,28 +520,12 @@ cxxabi.h
 acxx_demangle.h
 -
 
-D:/OOP/RNA/RNA.cpp
+D:/OOP/RNA/Tests/RNA.h
 iostream
 -
-stdint.h
--
-cstring
+cstdint
 -
 cmath
--
-RNA.h
-D:/OOP/RNA/RNA.h
-
-D:/OOP/RNA/RNA.h
-stdio.h
--
-stdlib.h
--
-
-D:/OOP/RNA/Tests/RNA.h
-stdio.h
--
-stdlib.h
 -
 
 D:/OOP/RNA/Tests/test.cpp

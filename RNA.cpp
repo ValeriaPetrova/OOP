@@ -1,35 +1,40 @@
-#include <iostream>
-#include <stdint.h>
-#include <cstring>
-#include <cmath>
 #include "RNA.h"
 
+RNA::RNA() {}
 
-RNA::RNA(Nucl N, size_t length) {//+
+RNA::RNA(Nucl nucl, size_t length){
     for (size_t i = 0; i < length; i++){
-        add_elem(N);
+        add_elem(nucl);
     }
 }
 
-RNA::RNA(const RNA &rna) {//+
-    numb_of_nucl = rna.numb_of_nucl;
-    length_of_chain = rna.length_of_chain;
+RNA::RNA(const RNA &rna1) {
+    length_of_chain = rna1.length_of_chain;
     chain_of_nucl = new size_t [length_of_chain];
-    memcpy(chain_of_nucl, rna.chain_of_nucl, sizeof(size_t) * length_of_chain);
+    for (size_t i = 0; i < length_of_chain; i++){
+        chain_of_nucl[i] = rna1.chain_of_nucl[i];
+    }
+    numb_of_nucl = rna1.numb_of_nucl;
 }
 
-RNA::~RNA() {//+
+RNA::~RNA() {
     if (chain_of_nucl != nullptr) {
         delete[] chain_of_nucl;
         chain_of_nucl = nullptr;
     }
 }
 
-Nucl RNA::GetNucl(size_t idx) const{ //+
+RNA::reference::reference(size_t idx, RNA &rna1) : num(idx), rna(rna1) {}
+
+RNA::reference::~reference() = default;
+
+//------------------------------------------------------------------------
+
+Nucl RNA::GetNucl(size_t idx) const{
     size_t bitMask = 3;
-    size_t idxArray = idx / nucl_count_in_size_t;
-    size_t idxRNA = idx % nucl_count_in_size_t + 1;
-    size_t nucl = (chain_of_nucl[idxArray] & bitMask << (sizeof(size_t) * 8 - idxRNA * 2)) >> (sizeof(size_t) * 8 - idxRNA * 2);
+    size_t idxArray = (size_t)ceil((float)idx / (float)nucl_count_in_size_t) - 1;
+    size_t shift = (nucl_count_in_size_t - (idx - nucl_count_in_size_t * idxArray)) * 2;
+    size_t nucl = ((*this).chain_of_nucl[idxArray] & (bitMask << shift)) >> shift;
     switch (nucl){
         case 0: return A;
             break;
@@ -42,31 +47,31 @@ Nucl RNA::GetNucl(size_t idx) const{ //+
         default:
             break;
     }
+    return A;
 }
 
-void RNA::add_elem(Nucl nucleotide) {//++
-    if(chain_of_nucl == nullptr){
-        chain_of_nucl = new size_t;
-        int shift = 2 * (nucl_count_in_size_t * (length_of_chain + 1) - numb_of_nucl) - 2;
-        chain_of_nucl[0] = (size_t)nucleotide << shift;
+void RNA::add_elem(Nucl nucl){
+    if (chain_of_nucl == nullptr){
+        chain_of_nucl = new size_t[1];
         length_of_chain++;
+        size_t shift = nucl_count_in_size_t * length_of_chain - numb_of_nucl - 1;
+        chain_of_nucl[0] = (size_t)nucl << (shift * 2);
     }
-    else if (nucl_count_in_size_t > numb_of_nucl / length_of_chain){
-        int shift = 2 * (nucl_count_in_size_t * length_of_chain - numb_of_nucl) - 2;
-        size_t n = (size_t)nucleotide << shift;
+    else if (nucl_count_in_size_t > (numb_of_nucl / length_of_chain)){
+        size_t shift = nucl_count_in_size_t * length_of_chain - numb_of_nucl - 1;
+        size_t n = (size_t)nucl << (shift * 2);
         chain_of_nucl[length_of_chain - 1] = chain_of_nucl[length_of_chain - 1] | n;
-        length_of_chain++;
     }
-    else { // nucl_count_in_size_t <= numb_of_nucl / length_of_chain
-        size_t *new_chain = new size_t[length_of_chain * 2];
+    else {
+        auto *new_chain = new size_t[length_of_chain + 1];
         for (int i = 0; i < length_of_chain; i++){
             new_chain[i] = chain_of_nucl[i];
         }
-        int shift = 2 * (nucl_count_in_size_t * (length_of_chain + 1) - numb_of_nucl) - 2;
-        new_chain[length_of_chain] = (size_t)nucleotide << shift;
+        size_t shift = nucl_count_in_size_t * (length_of_chain + 1) - numb_of_nucl - 1;
+        new_chain[length_of_chain] = (size_t)nucl << (shift * 2);
         delete[] chain_of_nucl;
         chain_of_nucl = new_chain;
-        length_of_chain *= 2;
+        length_of_chain++;
     }
     numb_of_nucl++;
 }
@@ -76,40 +81,34 @@ Nucl RNA::complementary(Nucl nucleotide) const{//++
     return n;
 }
 
-bool RNA::isComplementary(const RNA& rna) const {//+
-    if (this->numb_of_nucl != rna.numb_of_nucl){
+bool RNA::isComplementary(RNA &rna1) const{
+    if (this->num_of_nucls() != rna1.num_of_nucls()) {
         return false;
-    } else {
-        size_t i = 0;
-        while(i != this->numb_of_nucl){
-            if (this->GetNucl(i) == !complementary(rna.GetNucl(i))){
-                i++;
-            } else {
-                return false;
-            }
-        }
-        return true;
     }
+    RNA buff(rna1);
+    return (!buff == (*this));//(!buff == (*this)) ? true : false
 }
 
-void RNA::trim(size_t last_idx) {  //+ забыть содержимое от lastIndex и дальше
+RNA& RNA::trim(size_t last_idx) {  //+ забыть содержимое от lastIndex и дальше
     size_t *new_chain;
-    numb_of_nucl = last_idx;
-    length_of_chain = last_idx * 2 / sizeof(size_t) / 8 + 1;
-    new_chain = chain_of_nucl;
-    chain_of_nucl = new size_t[length_of_chain];
-    memcpy(chain_of_nucl, new_chain, length_of_chain * sizeof(size_t)); // (new_chain в chain_of_nucl)
+    this->numb_of_nucl = last_idx;
+    this->length_of_chain = last_idx * 2 / sizeof(size_t) / 8 + 1;
+    new_chain = this->chain_of_nucl;
+    this->chain_of_nucl = new size_t[this->length_of_chain];
+    memcpy(this->chain_of_nucl, new_chain, this->length_of_chain * sizeof(size_t)); // (new_chain в chain_of_nucl)
     delete[] new_chain;
+    return (*this);
 }
 
-RNA RNA::split(size_t idx) {//+
-    RNA result;
-    for (size_t i = idx; i < numb_of_nucl; i++) {
-        Nucl n = (*this)[i];
-        result.add_elem(n);
+RNA& RNA::split(size_t idx) {
+    RNA rna1;
+    rna1.numb_of_nucl = this->numb_of_nucl - idx;
+    rna1.length_of_chain = rna1.numb_of_nucl * 2 / sizeof(size_t) / 8 + 1;
+    rna1.chain_of_nucl = new size_t[rna1.length_of_chain];
+    for (size_t i = idx; i < this->numb_of_nucl; i++) {
+        (rna1)[i - idx] = (*this)[i];
     }
-    trim(idx);
-    return result;
+    return rna1;
 }
 
 size_t RNA::cardinality(Nucl value) {
@@ -121,120 +120,110 @@ size_t RNA::cardinality(Nucl value) {
     }
     return result;
 }
+//-----------------------------------------------------------
 
-//---------------------------------------------------------------------------------
-RNA::reference::reference(size_t idx, RNA &rna1) : num(idx), rna(rna1){ }
-
-RNA operator+(RNA &rna1, RNA &rna2) {//+
-    RNA rna;
-    rna.numb_of_nucl = rna1.numb_of_nucl + rna2.numb_of_nucl;
-    rna.length_of_chain = rna.numb_of_nucl * 2 / sizeof(size_t) / 8 + 1;
-    rna.chain_of_nucl = new size_t[rna.length_of_chain];
-    memcpy(rna.chain_of_nucl, rna1.chain_of_nucl, rna1.length_of_chain * sizeof(size_t));
-    for (size_t i = rna1.numb_of_nucl; i < rna.numb_of_nucl; i++) {
-        rna.add_elem(rna2[i]);
+RNA operator+(RNA &rna1, RNA &rna2){
+    RNA result;
+    result = rna1;
+    for (size_t i = 1; i <= rna2.numb_of_nucl; i++){
+        result.add_elem(rna2[i]);
     }
-    return rna;
+    return result;
 }
 
-bool RNA::operator==(const RNA &rna) const{//+
-    if (this->numb_of_nucl != rna.numb_of_nucl) {
+bool RNA::operator==(const RNA &rna1) const{
+    if (this->numb_of_nucl != rna1.numb_of_nucl) {
         return false;
     }
-    for (size_t i = 0; i < rna.length_of_chain; i++) {
-        if (this->chain_of_nucl[i] != rna.chain_of_nucl[i]) {
+    if (!this->numb_of_nucl && !rna1.numb_of_nucl) {
+        return true;
+    }
+    for (size_t i = 1; i < rna1.length_of_chain; i++){
+        if (this->chain_of_nucl[i] != rna1.chain_of_nucl[i]) {
+            return false;
+        }
+    }
+    size_t idx = nucl_count_in_size_t * (length_of_chain - 1) + 1;
+    for (idx; idx <= numb_of_nucl; idx++){
+        if (this->GetNucl(idx) != rna1.GetNucl(idx)) {
             return false;
         }
     }
     return true;
 }
 
-bool RNA::operator!=(const RNA &rna) const{//+
-    return !((*this) == rna);
+bool RNA::operator!=(const RNA &rna1) const{//+
+    return !((*this) == rna1);//((*this) == rnk) ? false : true;
 }
 
-RNA RNA::operator!(){//+
-    for (size_t i = 0; i < this->numb_of_nucl; i++) {
-        Nucl nucl = (*this)[i];
-        Nucl new_nucl = complementary(nucl);
-        (*this)[i] = new_nucl;
+RNA::reference RNA::operator[](size_t num){
+    return reference(num, (*this));
+}
+
+Nucl RNA::operator[](size_t num) const{
+    return GetNucl(num);
+}
+
+RNA RNA::operator!() const{//+
+    RNA rna;
+    rna.numb_of_nucl = this->numb_of_nucl;
+    rna.length_of_chain = this->length_of_chain;
+    rna.chain_of_nucl = new size_t[rna.length_of_chain];
+    for (size_t i = 0; i < rna.length_of_chain; i++){
+        rna.chain_of_nucl[i] = ~(this->chain_of_nucl[i]);
     }
-    return (*this);
+    return rna;
 }
 
-RNA& RNA::operator=(RNA const &rna) {//+
-    if (this->length_of_chain != rna.length_of_chain) {
+// ПОЧЕМУ ТАК НЕ РАБОТАЕТ????????????????????????????????
+//RNA RNA::operator!() const{//
+//    RNA rna(*this);
+//    for (size_t i = 0; i < this->length_of_chain; i++) {
+//        rna.chain_of_nucl[i] = (complementary((Nucl)(this->chain_of_nucl[i])));
+//    }
+//    return rna;
+//}
+
+RNA &RNA::operator=(const RNA &rna1){
+    if (this->length_of_chain != rna1.length_of_chain) {
         delete[] this->chain_of_nucl;
-        this->chain_of_nucl = new size_t[rna.length_of_chain];
-        this->length_of_chain = rna.length_of_chain;
+        this->chain_of_nucl = new size_t[rna1.length_of_chain];
+        this->length_of_chain = rna1.length_of_chain;
     }
 
-    this->numb_of_nucl = rna.numb_of_nucl;
+    this->numb_of_nucl = rna1.numb_of_nucl;
     for (size_t i = 0; i < this->length_of_chain; i++) {
-        this->chain_of_nucl[i] = rna.chain_of_nucl[i];
+        this->chain_of_nucl[i] = rna1.chain_of_nucl[i];
     }
     return (*this);
 }
 
-RNA::reference::operator Nucl() const{//+
+RNA::reference &RNA::reference::operator=(Nucl nucl){
+    if (num > rna.numb_of_nucl){
+        for (size_t i = 0; i < rna.numb_of_nucl - num; i++){
+            rna.add_elem(nucl);
+        }
+    } else {
+        size_t bitMask = 3;
+        size_t idxArray = (size_t) ceil((float)num / (float)nucl_count_in_size_t) - 1;
+        size_t shift = (nucl_count_in_size_t - (num - nucl_count_in_size_t * idxArray)) * 2;
+        size_t n = (size_t) nucl << shift;
+        rna.chain_of_nucl[idxArray] = (rna.chain_of_nucl[idxArray] & ~(bitMask << shift)) | n;
+    }
+    return (*this);
+}
+
+RNA::reference & RNA::reference::operator=(reference r){
+    Nucl nucl = r.rna.GetNucl(r.num);
+    rna[num] = nucl;
+    return (*this);
+}
+
+RNA::reference::operator Nucl(){
     return rna.GetNucl(num);
 }
 
-RNA::reference RNA::operator[](size_t num) {//+
-    return reference(num, *this);
-}
-
-RNA::reference& RNA::reference::operator=(Nucl N){//+?
-    size_t bitMask = 3;
-    size_t idxRNA =  rna.length_of_chain % rna.nucl_count_in_size_t + 1;
-    rna.chain_of_nucl[rna.numb_of_nucl] &= ~(bitMask << (sizeof(size_t) * 8 - idxRNA * 2));
-    bitMask = N;
-    rna.chain_of_nucl[rna.numb_of_nucl] |= (bitMask << (sizeof(size_t) * 8 - idxRNA * 2));
-    return *this;
-}
-
-RNA::reference& RNA::reference::operator=(const RNA::reference& ref) {//+
-    operator=(Nucl(ref));
-    return *this;
-}
-
-RNA::reference::~reference() = default;
-
-//_________________________________________________________________________________
-
-void RNA::output() const {
-    int bits = sizeof(size_t) * 8 - 2;
-    size_t bitMask = 3 << bits;
-    size_t end_of_rna = 0;
-    for (size_t i = 0; i < length_of_chain; i++){
-        if (numb_of_nucl - i * nucl_count_in_size_t < nucl_count_in_size_t){
-            end_of_rna = numb_of_nucl - i * nucl_count_in_size_t;
-        }
-        else {
-            end_of_rna = nucl_count_in_size_t;
-        }
-        for (size_t j = 0; j < end_of_rna; j++){
-            int n = (int)((chain_of_nucl[i] & (bitMask >> (2 * j))) >> (bits - 2 * j));
-            switch (n){
-                case 0:
-                    std::cout << "A";
-                    break;
-                case 1:
-                    std::cout << "G";
-                    break;
-                case 2:
-                    std::cout << "C";
-                    break;
-                case 3:
-                    std::cout << "T";
-                    break;
-                default:
-                    break;
-            }
-        }
-        std::cout << " ";
-    }
-}
+//-----------------------------------------------------------
 
 size_t RNA::length() const {
     return this->length_of_chain;
@@ -243,3 +232,40 @@ size_t RNA::length() const {
 size_t RNA::num_of_nucls() const {
     return this->numb_of_nucl;
 }
+
+//void RNA::output() const {
+//    int bits = sizeof(size_t) * 8 - 2;
+//    size_t bitMask = 3 << bits;
+//    size_t end_of_rna = 0;
+//    for (size_t i = 0; i < length_of_chain; i++){
+//        if (numb_of_nucl - i * nucl_count_in_size_t < nucl_count_in_size_t){
+//            end_of_rna = numb_of_nucl - i * nucl_count_in_size_t;
+//        }
+//        else {
+//            end_of_rna = nucl_count_in_size_t;
+//        }
+//        for (size_t j = 0; j < end_of_rna; j++){
+//            int n = (int)((chain_of_nucl[i] & (bitMask >> (2 * j))) >> (bits - 2 * j));
+//            switch (n){
+//                case 0:
+//                    std::cout << "A";
+//                    break;
+//                case 1:
+//                    std::cout << "G";
+//                    break;
+//                case 2:
+//                    std::cout << "C";
+//                    break;
+//                case 3:
+//                    std::cout << "T";
+//                    break;
+//                default:
+//                    break;
+//            }
+//        }
+//        std::cout << " ";
+//    }
+//}
+
+
+
