@@ -175,16 +175,10 @@ RNA RNA::operator!() const{//+
     return rna;
 }
 
-// ПОЧЕМУ ТАК НЕ РАБОТАЕТ????????????????????????????????
-//RNA RNA::operator!() const{//
-//    RNA rna(*this);
-//    for (size_t i = 0; i < this->length_of_chain; i++) {
-//        rna.chain_of_nucl[i] = (complementary((Nucl)(this->chain_of_nucl[i])));
-//    }
-//    return rna;
-//}
-
 RNA &RNA::operator=(const RNA &rna1){
+    if (this == &rna1) {
+        return *this;
+    }
     if (this->length_of_chain != rna1.length_of_chain) {
         delete[] this->chain_of_nucl;
         this->chain_of_nucl = new size_t[rna1.length_of_chain];
