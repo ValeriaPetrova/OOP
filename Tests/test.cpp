@@ -62,12 +62,12 @@ TEST(TestTrim,test6){
     EXPECT_EQ(true, rna1 == rna2);
 }
 
-//TEST(TestSplit, test7){
-//    RNA rna1 = newRNA("AGCTAGCT");
-//    RNA rna2 = newRNA("GCT");
-//    RNA rna3 = rna1.split(5);
-//    EXPECT_EQ(true, rna3 == rna2);
-//}
+TEST(TestTrim, test31) {
+    RNA rna1 = newRNA("AAAA");
+    RNA rna2;
+    rna1 = rna1.trim(0);
+    EXPECT_EQ(true, rna1 == rna2);
+}
 
 TEST(TestCardinality, test8){
     RNA rna(A, 10);
@@ -78,7 +78,7 @@ TEST(TestCardinality, test8){
 TEST(TestCardinality, test9){
     RNA rna(A, 100);
     rna[1] = rna[2] = rna[3] = G;
-    EXPECT_EQ(rna.cardinality(A), 100-3);
+    EXPECT_EQ(rna.cardinality(A), 100-4);
 }
 
 TEST(TestAdd, test10){
@@ -98,6 +98,18 @@ TEST(TestAdd, test11){
     EXPECT_EQ(true, rna3 == rna4);
 }
 
+TEST(TestEqual, test26){
+    RNA rna1;
+    RNA rna2;
+    EXPECT_EQ(true, rna1 == rna2);
+}
+
+TEST(TestEqual, test27){
+    RNA rna1;
+    RNA rna2 = newRNA("AAAA");
+    EXPECT_EQ(false, rna1 == rna2);
+}
+
 TEST(TestEqual, test12){
     RNA rna1 = newRNA("AAAACCCCGGGGTTTT");
     RNA rna2 = newRNA("AAAACTTTGGGGCCCT");
@@ -114,6 +126,18 @@ TEST(TestEqual, test14){
     RNA rna1 = newRNA("AAAA");
     RNA rna2 = newRNA("AAAAAAAA");
     EXPECT_EQ(false, rna1 == rna2);
+}
+
+TEST(TestNotEqual, test28){
+    RNA rna1;
+    RNA rna2;
+    EXPECT_EQ(false, rna1 != rna2);
+}
+
+TEST(TestNotEqual, test29){
+    RNA rna1;
+    RNA rna2 = newRNA("AAAA");
+    EXPECT_EQ(true, rna1 != rna2);
 }
 
 TEST(TestNotEqual, test15){
@@ -155,6 +179,13 @@ TEST(TestNot, test20){
     EXPECT_EQ(false, rna1 == rna2);
 }
 
+TEST(TestNot, test30){
+    RNA rna1;
+    RNA rna2;
+    rna2 = !rna1;
+    EXPECT_EQ(true, rna1 == rna2);
+}
+
 TEST(TestAllocation, test21){
     RNA rna1 = newRNA("AAAACTTTGGGGCCCT");
     RNA rna2;
@@ -172,6 +203,13 @@ TEST(TestAllocation, test22){
 TEST(TestAllocation, test23){
     RNA rna1 = newRNA("ACGTACGTACGT");
     RNA rna2 = newRNA("AAAACTTTGGGGCCCT");
+    rna2 = rna1;
+    EXPECT_EQ(true, rna1 == rna2);
+}
+
+TEST(TestAllocation, test29){
+    RNA rna1;
+    RNA rna2;
     rna2 = rna1;
     EXPECT_EQ(true, rna1 == rna2);
 }
